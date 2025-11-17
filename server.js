@@ -12,7 +12,8 @@ const PORT = 3000;
 
 app.use(express.json());
 
-const connetDB = async () => {
+
+const connectDB = async () => {
     try{
       await mongoose.connect(process.env.MONGO_URI)
       console.log("Conectado ao MongoDB");
@@ -22,15 +23,23 @@ const connetDB = async () => {
     
 };
 
-connetDB();
+connectDB();
+
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "API está funcionando corretamente",
+    timestamp: new Date().toISOString()
+  });
+});
 
 // CREATE
 app.post("/vendas", async (req, res) => {
     try{
       const novaVendaMensal = await VendaMensal.create(req.body);
-      res.json(novaVendaMensal);
+      res.status(201).json(novaVendaMensal);
     } catch (error) {
-        res.json({ error: error });
+        res.status(500).json({ error: error });
     }
   
 
@@ -44,9 +53,34 @@ app.get("/", (req, res) => {
 app.get("/vendas", async (req, res) => {
     try {
       const vendasMensais = await VendaMensal.find();
-      res.json(vendasMensais);
+      res.status(200).json(vendasMensais);
     } catch (error) {
-      res.json({ error: error });
+      res.status(500).json({ error: error });
+    }
+  });
+
+  // READ BY ID
+  app.get("/vendas/:id", async (req, res) => {
+    try {
+      const id = req.params.id;
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          error: "ID é obrigatório",
+          data: null
+        });
+      }
+      if (id.length !== 24) {
+        return res.status(400).json({
+          success: false,
+          error: "ID deve ter 24 caracteres",
+          data: null
+        });
+      }
+      const vendaMensal = await VendaMensal.findById(req.params.id);
+      res.status(200).json(vendaMensal);
+    } catch (error) {
+      res.status(500).json({ error: error });
     }
   });
   
@@ -58,9 +92,9 @@ app.get("/vendas", async (req, res) => {
         req.body,
         { new: true }
       );
-      res.json(novaVendaMensal);
+      res.status(200).json(novaVendaMensal);
     } catch (error) {
-      res.json({ error: error });
+      res.status(500).json({ error: error });
     }
   });
   
@@ -70,9 +104,9 @@ app.get("/vendas", async (req, res) => {
       const vendaMensalExcluida = await VendaMensal.findByIdAndDelete(
         req.params.id
       );
-      res.json(vendaMensalExcluida);
+      res.status(200).json(vendaMensalExcluida);
     } catch (error) {
-      res.json({ error: error });
+      res.status(500).json({ error: error });
     }
   });
 
@@ -105,7 +139,7 @@ app.get("/vendas", async (req, res) => {
       const valorTotal = vendasAgrupadas.reduce((sum, v) => sum + v.totalVendido, 0);
       const media = vendasAgrupadas.length > 0 ? valorTotal / vendasAgrupadas.length : 0;
 
-      res.json({
+      res.status(200).json({
         mesMaisVendeu: vendasAgrupadas.length > 0 ? vendasAgrupadas[0] : null,
         todosOsMeses: vendasAgrupadas,
         resumo: {
@@ -115,7 +149,7 @@ app.get("/vendas", async (req, res) => {
         }
       });
     } catch (error) {
-      res.json({ error: error.message });
+      res.status(500).json({ error: error.message });
     }
   });
 
@@ -151,7 +185,7 @@ app.get("/vendas", async (req, res) => {
         "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
       ];
 
-      res.json({
+      res.status(200).json({
         mes: mesMaisVendeu ? mesMaisVendeu.mes : null,
         nomeMes: mesMaisVendeu ? nomesMeses[mesMaisVendeu.mes - 1] : null,
         valorTotalVendido: mesMaisVendeu ? mesMaisVendeu.totalVendido : 0,
@@ -160,7 +194,7 @@ app.get("/vendas", async (req, res) => {
           : "Não há vendas cadastradas"
       });
     } catch (error) {
-      res.json({ error: error.message });
+      res.status(500).json({ error: error.message });
     }
   });
 
